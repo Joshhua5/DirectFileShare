@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <sys/queue.h>
+
+#include "linkedlist.h"
+
 typedef struct Config {
 	char* username;
 	int port;
@@ -11,12 +15,11 @@ typedef struct Config {
 	char* log_file;
 }Config;
 
-struct SharingList {
-	
+typedef struct SharingList{
 	int list_count;
-};
+} SharingList;
 
-struct Config create_config(const char* file_name){
+Config create_config(const char* file_name){
 	Config new_config;
 	new_config.username = "default";
 	new_config.port = 8080;
@@ -36,7 +39,7 @@ struct Config create_config(const char* file_name){
 	return new_config;
 }
 
-struct Config load_config(){ 
+Config load_config(){ 
 	const char* config_name = "settings.conf";
 	// Check for the existance of the file
 	if(access(config_name, F_OK) == 0){
@@ -75,7 +78,7 @@ struct Config load_config(){
 	}
 }
 
-void free_config(struct Config loaded_config){
+void free_config(Config loaded_config){
 	free(loaded_config.username);
 	free(loaded_config.ip);
 	free(loaded_config.log_file);
@@ -89,12 +92,41 @@ void load_sharing_list(){
 
 }
 
-void scan_directory(){
+void scan_directory(char* path, bool recursive){
+	DIR* directory;
+	directory = opendir(path);
+	if(directory != false){
+		printf("Unable to open directory");
+		return;
+	}
 
+	LinkedList* directory_list = CreateLinkedList();
+ 	AppendLinkedList(directory_list, directory); 
+	while((DIR* dir = NextLinkedList(directory_list)) != NULL){
+		struct dirent* entry;
+		entry = readdir(directory);
+		if(entry != false){
+			switch(entry->d_type){
+				case DT_DIR:
+					if(recursive)
+						AppendLinkedList(directory_list, entry->)
+					break;
+				case DT_REG:
+					break; 
+			}	
+		} 
+	}
 }
 
-int main(){
-	struct Config loaded_config = load_config();
+int main(int argc char* argv[]){
+	/* 
+	-a [(file)|(folder)]
+	
+
+	*/
+
+
+	Config loaded_config = load_config();
 
 
 	free_config(loaded_config);
