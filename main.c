@@ -6,7 +6,9 @@
 
 #include <sys/queue.h>
 
-#include "linkedlist.h"
+#include "vector.h"
+
+#define MAX_PATH_LENGTH 256
 
 typedef struct Config {
 	char* username;
@@ -15,11 +17,11 @@ typedef struct Config {
 	char* log_file;
 }Config;
 
-typedef struct SharingList{
+typedef struct SharingList {
 	int list_count;
 } SharingList;
 
-Config create_config(const char* file_name){
+Config create_config(const char* file_name) {
 	Config new_config;
 	new_config.username = "default";
 	new_config.port = 8080;
@@ -27,22 +29,22 @@ Config create_config(const char* file_name){
 	new_config.log_file = "assignment.log";
 
 	FILE* config_file = fopen(file_name, "w");
-	if(config_file != NULL){
+	if (config_file != NULL) {
 
-		fprintf(config_file, "%s%s\n", "USERNAME:", new_config.username);  
-		fprintf(config_file, "%s%i\n", "PORT:", new_config.port);   
-		fprintf(config_file, "%s%s\n", "IP:", new_config.ip);   
-		fprintf(config_file, "%s%s\n", "LOG_FILE:", new_config.log_file);  
+		fprintf(config_file, "%s%s\n", "USERNAME:", new_config.username);
+		fprintf(config_file, "%s%i\n", "PORT:", new_config.port);
+		fprintf(config_file, "%s%s\n", "IP:", new_config.ip);
+		fprintf(config_file, "%s%s\n", "LOG_FILE:", new_config.log_file);
 
 		fclose(config_file);
-	} 
+	}
 	return new_config;
 }
 
-Config load_config(){ 
+Config load_config() {
 	const char* config_name = "settings.conf";
 	// Check for the existance of the file
-	if(access(config_name, F_OK) == 0){
+	if (access(config_name, F_OK) == 0) {
 		FILE* config_file = fopen(config_name, "r");
 		struct Config loaded_config;
 
@@ -58,77 +60,111 @@ Config load_config(){
 		fscanf(config_file, "IP:%255s\n", loaded_config.ip);
 		fscanf(config_file, "LOG_FILE:%255s\n", loaded_config.log_file);
 
-		printf("%s\n", loaded_config.username); 
+		printf("%s\n", loaded_config.username);
 		printf("%i\n", loaded_config.port);
 		printf("%s\n", loaded_config.ip);
 		printf("%s\n", loaded_config.log_file);
 
 		fclose(config_file);
 		return loaded_config;
-	}else{
-		switch(errno){
-			case ENOENT:
-				// File does not exist
-				return create_config(config_name);
-				break;
-			default:
-				// https://linux.die.net/man/2/access
-				printf("Unable to open log file");
+	}
+	else {
+		switch (errno) {
+		case ENOENT:
+			// File does not exist
+			return create_config(config_name);
+			break;
+		default:
+			// https://linux.die.net/man/2/access
+			printf("Unable to open log file");
 		}
 	}
 }
 
-void free_config(Config loaded_config){
+void free_config(Config loaded_config) {
 	free(loaded_config.username);
 	free(loaded_config.ip);
 	free(loaded_config.log_file);
 }
 
-void save_sharing_list(){
+void save_sharing_list() {
 
 }
 
-void load_sharing_list(){
+void load_sharing_list() {
 
 }
 
-void scan_directory(char* path, bool recursive){
+
+typedef struct DirectoryNode {
+	void* next; // DirectoryNode
+	char path[MAX_PATH_LENGTH];
+} DirectoryNode;
+
+typedef struct FileEntry {
+	char path[MAX_PATH_LENGTH];
+
+} FileEntry;
+
+void scan_directory(char* path) {
+
+	Vector* entry_list = CreateVector();
+	DirectoryNode* dir_list = malloc(sizeof(DirectoryNode));
+	strcpy(dir_list->path, path);
+	dir_list->next = NULL;
+
 	DIR* directory;
-	directory = opendir(path);
-	if(directory != false){
-		printf("Unable to open directory");
-		return;
-	}
-
-	LinkedList* directory_list = CreateLinkedList();
- 	AppendLinkedList(directory_list, directory); 
-	while((DIR* dir = NextLinkedList(directory_list)) != NULL){
-		struct dirent* entry;
-		entry = readdir(directory);
-		if(entry != false){
-			switch(entry->d_type){
-				case DT_DIR:
-					if(recursive)
-						AppendLinkedList(directory_list, entry->)
-					break;
-				case DT_REG:
-					break; 
-			}	
-		} 
+	directory = opendir(dir_list->path);
+	while (dir_list->next != NULL) {
+		// If directory is valid,
+		// add other directories to the list and process entries
+		if (directory != 0) {
+			struct dirent* entry = readdir(directory);
+			if (entry != NULL) {
+				switch (entry->d_type) {
+				case DT_DIR: {
+					DirectoryNode* new_dir = malloc(sizeof(DirectoryNode));
+					new_dir->next = dir_list->next;
+					dir_list->next = new_dir;
+					// Append the folder to the current path
+					strcpy(new_dir->path, dir_list->path);
+					strcat(new_dir->path, "/");
+					strcat(new_dir->path, entry->d_name);
+				}
+							 break;
+				case DT_REG: {
+					FileEntry* new_entry = malloc(sizeof(FileEntry));
+					strcpy(new_entry->path, dir_list->path);
+					strcat(new_entry->path, "/");
+					strcpy(new_entry->path, entry->d_name);
+				}
+							 break;
+				}
+			}
+		}
+		// Move onto the next directory
+		DirectoryNode* old = dir_list;
+		dir_list = dir_list->next;
+		free(old);
+		closedir(directory);
+		directory = opendir(dir_list->path);
 	}
 }
 
-int main(int argc char* argv[]){
-	/* 
-	-a [(file)|(folder)]
-	
+int main(int argc, char* argv[]) {
+	/*
+	Add folder to sharing list: -a [(file)|(folder)]
+	Remove folder from sharing list: -r [(file)|(folder)]
+
 
 	*/
-
-
-	Config loaded_config = load_config();
-
-
-	free_config(loaded_config);
+	  
+	// Config loaded_config = load_config();
+	 
+	int i = 0;
+	for (; i < argc; ++i)
+		printf("%s", argv[i]);
+	 
+	//free_config(loaded_config);
 	return 0;
 }
