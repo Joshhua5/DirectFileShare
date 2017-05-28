@@ -6,8 +6,8 @@
 
 typedef struct Vector {
 	void** data; 
-	unsigned int count;
-	unsigned int capacity;
+	int count;
+	int capacity;
 } Vector;
 
 Vector* CreateVector(){
@@ -23,8 +23,17 @@ Vector* CreateVector(){
 		return NULL;
 	}
 	vector->count = 0;
-	vector->capacity = 0; 
+	vector->capacity = 10; 
 	return vector;
+}
+
+void debug_vector(Vector* vector){
+	int i = 0;
+	printf("START VECTOR DEBUG %i", vector);
+	for(; i < vector->count; ++i){
+		printf("%i : %i\n", i, vector->data[i]);
+	}
+	printf("END DEBUG OF VECTOR");
 }
 
 // Removes all entries of NULLptr
@@ -38,13 +47,12 @@ void CompactVector(Vector* vector) {
 	for (; i < vector->capacity; ++i) {
 		// Shift over NULL pointers, until the end of the vector
 		while (	vector->data[i + current_shift_count] == NULL &&
-				i + current_shift_count < vector->capacity) {
+				i + current_shift_count < vector->count + current_shift_count) { 
 			current_shift_count++;
 		}
 		vector->data[i] = vector->data[i + current_shift_count];
-	}
-
-	vector->count -= current_shift_count;
+	} 
+	vector->count -= current_shift_count; 
 }
 
 void RemoveAtVector(Vector* vector, int index) {
@@ -82,16 +90,17 @@ void DestroyVector(Vector* vector, void(*destructor)(void*)){
 	free(vector);
 }
 
-void AppendVector(Vector* vector, void* data){
+bool AppendVector(Vector* vector, void* data){
 	if(vector == NULL){
 		log_entry("Error with vector operation, AppendVector");
-		return;
+		return false;
 	}
 
 	if(vector->count >= vector->capacity - 1){
 		ExpandVector(vector, ((int)(float)vector->capacity * 0.1f) + 5);
 	}
 	vector->data[vector->count++] = data;
+	return true;
 }
   
 

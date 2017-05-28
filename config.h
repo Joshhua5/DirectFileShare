@@ -12,7 +12,7 @@ Config create_config(const char* file_name) {
 	Config new_config;
 	new_config.username = "default";
 	new_config.port = 8080;
-	new_config.ip = "192.168.1.1";
+	new_config.ip = "127.0.0.1";
 	new_config.log_file = "assignment.log";
 
 	FILE* config_file = fopen(file_name, "w");

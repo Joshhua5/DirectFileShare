@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 
-#include "vector.h"
+#include "vector.h" 
 #include "globals.h"
 
 static Vector* SharingList;
@@ -22,25 +22,28 @@ void init_sharing_list(){
 void free_sharing_list(){
 	// Destroy the vector and call free on each element
 	DestroyVector(SharingList, free);
-}
-
-bool sharing_list_contains(char* path){
-	// Iterate over all entries and return true on the first match
+} 
+FileEntry* get_from_sharing_list(char* name){
 	int i = 0;
 	for(; i < SharingList->count; ++i){
 		if(SharingList->data[i] != NULL)
-			if(strcmp(((FileEntry*)(SharingList->data[i]))->path, path) == 0)
-				return true;
+			if(strcmp(((FileEntry*)(SharingList->data[i]))->name, name) == 0)
+				return (FileEntry*)(SharingList->data[i]);
 	}
-	return false;
+	return NULL;
+} 
+
+bool sharing_list_contains(char* name){
+	// Iterate over all entries and return true on the first match
+	return get_from_sharing_list(name) != NULL; 
 }
 
-void remove_from_sharing_list(char* path){
+void remove_from_sharing_list(char* name){
 	// Iterate over all entries and return true on the first match
 	int i = 0;
 	for(; i < SharingList->count; ++i){
 		if(SharingList->data[i] != NULL){
-			if(strcmp(((FileEntry*)(SharingList->data[i]))->path, path) == 0){
+			if(strcmp(((FileEntry*)(SharingList->data[i]))->name, name) == 0){
 				free(SharingList->data[i]);
 				SharingList->data[i] = NULL;
 			}
@@ -48,7 +51,7 @@ void remove_from_sharing_list(char* path){
 	} 
 }
 
-void add_to_sharing_list(char* path) {
+void add_to_sharing_list(char* path, int perm) {
 	log_entry("Adding to shared list: ");
 	log_entry(path);
  
@@ -98,7 +101,7 @@ void add_to_sharing_list(char* path) {
 						strcat(new_entry->path, "/");
 						strcat(new_entry->path, entry->d_name);
 						strcpy(new_entry->name, entry->d_name);
-						strcpy(new_entry->permissions, "all"); 
+						new_entry->permissions = perm; 
 						// If this file does not already exist
 						// add it into the sharing list
 						if(sharing_list_contains(new_entry->path) == false)
@@ -126,10 +129,13 @@ void add_to_sharing_list(char* path) {
 		// Add the individual file into the list
 		FileEntry* new_entry = malloc(sizeof(FileEntry));
 		memset(new_entry, 0, sizeof(FileEntry)); 
-		strcpy(new_entry->path, path); 
-		strcpy(new_entry->name, strrchr(path, '/'));
-		strcpy(new_entry->permissions, "all"); 
-
+		strcpy(new_entry->path, path);
+		char* offset = strrchr(path, '/');
+		if(offset == NULL)
+			strcpy(new_entry->name, path);
+		else
+			strcpy(new_entry->name, offset); 
+		new_entry->permissions = perm;
 		if(sharing_list_contains(new_entry->path) == false)
 			AppendVector(SharingList, new_entry);
 
@@ -153,7 +159,7 @@ void save_sharing_list() {
 		// Check entries
 		FileEntry* entry = SharingList->data[i];
 		if(entry != NULL)
-			fprintf(sharing_file, "%s %s %s \n", entry->path, entry->name, entry->permissions); 
+			fprintf(sharing_file, "%s %s %i \n", entry->path, entry->name, entry->permissions); 
 	}
 	fclose(sharing_file);  
 }
@@ -169,7 +175,10 @@ void load_sharing_list() {
 		while(!feof(sharing_file)){
 			// Check entries
 			FileEntry* entry = malloc(sizeof(FileEntry));
-			fscanf(sharing_file, "%s%s%s\n", entry->path, entry->name, entry->permissions);
+			if(fscanf(sharing_file, "%s%s%i\n", entry->path, entry->name, &entry->permissions) != 3){
+				free(entry);
+				continue; 
+			}
  			// If the file exists then add it into the sharing list
  			if(access(entry->path, F_OK) == 0)
  				AppendVector(SharingList, entry); 

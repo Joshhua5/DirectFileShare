@@ -28,7 +28,9 @@ void log_entry(char* msg){
 
 void start_logging(char* log_file){
 	if(logger_file != NULL){
-		log_entry("");
+		fclose(logger_file);
+		logger_file = fopen(log_file, "a");
+		log_entry("Reopened log file");
 	}
 
 	// if init is invalid then valid file_lock is false and
@@ -46,6 +48,7 @@ void start_logging(char* log_file){
 }
 
 void stop_logging(){
+	log_entry("File logging stopped");
 	pthread_mutex_destroy(&file_lock);
 	fclose(logger_file);
 	logger_file = NULL;
